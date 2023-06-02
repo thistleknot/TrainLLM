@@ -1,0 +1,14 @@
+{
+    "supernatural": {"ratio": 1.25},
+    "squad_v2": {"ratio": 1.25},
+    "openai_summarize_tldr": {"ratio": 1.25},
+    "squad": {"ratio": "None"},
+    "quotes": {"ratio": 1},
+    "alpaca": {"ratio": 2},
+    "cosmos_qa": {"ratio": 1},
+    "wiki_qa": {"ratio": 1},
+    "oa_conversation": {"ratio": 2},
+    "dolly15k": {"ratio": 2},
+    "sciq": {"ratio": 1},
+    "subjqa": {"ratio": 1}
+}
