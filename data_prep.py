@@ -61,7 +61,7 @@ selected_indices = []
 if os.path.exists("datasets.pkl"):
     with open("datasets.pkl", "rb") as f:
         #dolly15k, squad_v2, squad, sciq, alpaca, wiki_qa, cosmos_qa, supernatural, quotes, red_pajama_contexts, oa_dataset = pickle.load(f)
-        dolly15k, squad_v2, squad, sciq, alpaca, wiki_qa, cosmos_qa, supernatural, quotes, oa_conversation_list, subjqa, openai_summarize_tldr, flan_cot_ecqa = pickle.load(f)
+        dolly15k, squad_v2, squad, sciq, alpaca, wiki_qa, cosmos_qa, supernatural, quotes, oa_conversation_list, subjqa, openai_summarize_tldr, flan_cot_ecqa, piqa, evol_instruct_70k = pickle.load(f)
 else:
 
     flan_cot_ecqa = pd.read_csv('/mnt/distvol/FLAN/flan/v2/cot_data/ecqa_train.tsv',delimiter='\t',header=None)
@@ -77,6 +77,8 @@ else:
     wiki_qa = concatenate_datasets([load_dataset("wiki_qa")[split] for split in ['train', 'validation','test']])
     subjqa = concatenate_datasets([load_dataset('subjqa', 'books')[split] for split in ['train', 'validation','test']])
     openai_summarize_tldr = concatenate_datasets([load_dataset("CarperAI/openai_summarize_tldr")[split] for split in ['train', 'valid', 'test']])
+    piqa = concatenate_datasets([load_dataset("piqa")[split] for split in ['train', 'validation', 'test']])
+    evol_instruct_70k = concatenate_datasets([load_dataset("WizardLM/evol_instruct_70k")['train']])
 
     """
     oa = load_dataset("h2oai/h2ogpt-oig-oasst1-instruct-cleaned-v2")
@@ -120,8 +122,8 @@ else:
         end_of_chain_ids.extend(chain_end_of_chain_ids)
 
     # Display the conversation dictionary and end_of_chain_ids
-    print(conversation_dict)
-    print(end_of_chain_ids)
+    #print(conversation_dict)
+    #print(end_of_chain_ids)
 
     conversations = []
     for head_message_id, head_content in conversation_dict.items():
@@ -170,11 +172,12 @@ else:
 
     quotes_az = pd.read_csv(r"/mnt/distvol/text-generation-webui/data/quotes_by_author.csv",index_col=0)['0'].values
     quotes_gracious = pd.read_csv(r"/mnt/distvol/text-generation-webui/data/graciousquotes.csv",index_col=0)['0'].values
-    quotes = [*quotes_az,*quotes_gracious]
+    quotes_english = load_dataset("Abirate/english_quotes")['train']['quote']
+    quotes = np.unique([*quotes_az, *quotes_gracious, *quotes_english])
 
     with open("datasets.pkl", "wb") as f:
         #pickle.dump((dolly15k, squad_v2, squad, sciq, alpaca, wiki_qa, cosmos_qa, supernatural, quotes, red_pajama_contexts, oa_dataset), f)
-        pickle.dump((dolly15k, squad_v2, squad, sciq, alpaca, wiki_qa, cosmos_qa, supernatural, quotes, oa_conversation_list, subjqa, openai_summarize_tldr, flan_cot_ecqa), f)
+        pickle.dump((dolly15k, squad_v2, squad, sciq, alpaca, wiki_qa, cosmos_qa, supernatural, quotes, oa_conversation_list, subjqa, openai_summarize_tldr, flan_cot_ecqa, piqa, evol_instruct_70k), f)
 
 if sample:
     #pretrain
@@ -195,11 +198,14 @@ if sample:
     sample_ratios['subjqa']['size'] = len(subjqa)
     sample_ratios['quotes']['size'] = len(quotes)
     sample_ratios['flan_cot_ecqa']['size'] = len(flan_cot_ecqa)
+    sample_ratios['piqa']['size'] = len(piqa)
+    sample_ratios['evol_instruct_70k']['size'] = len(evol_instruct_70k)
 
+    print(sample_ratios)
     df_ratios = pd.DataFrame(sample_ratios).T
     df_ratios['ratios'] = np.round(df_ratios['ratio']/np.nanmean(df_ratios['ratio']),2)
     
-    df_ratios['sample_size'] = df_ratios['ratios'] * sample_size
+    df_ratios['sample_size'] = np.round((df_ratios['ratios'] * sample_size),0)
     df_ratios['min_sample_size'] = np.minimum(df_ratios['size'], df_ratios['sample_size']).where(df_ratios['sample_size'].notna(), np.nan)
     
     for v in sample_ratios.values():
@@ -212,7 +218,7 @@ if sample:
             mean_ratio = np.nanmean(df_ratios['ratios'])
             ratio_new = np.round(ratio / mean_ratio,2)
             v['ratio_new'] = ratio_new
-            v['sample_size'] = ratio_new * sample_size
+            v['sample_size'] = int(np.round((ratio_new * sample_size),0))
             v['min_sample_size'] = np.minimum(v['size'], v['sample_size'])
 
     print(sample_ratios)
@@ -247,6 +253,10 @@ if sample:
     sample_ratios['alpaca']['indices']=dolly15k_indices
     alpaca_qa_records = [generate_prompt_example(**{'prompt': alpaca[i]['instruction'], 'response': alpaca[i]['output']}) for i in alpaca_indices]
 
+    evol_instruct_70k_indices = random.sample(range(sample_ratios['evol_instruct_70k']['size']), int(sample_ratios['evol_instruct_70k']['min_sample_size']))
+    sample_ratios['evol_instruct_70k']['indices']=evol_instruct_70k_indices
+    evol_instruct_70k_qa_records = [generate_prompt_example(**{'prompt': evol_instruct_70k[i]['instruction'], 'response': evol_instruct_70k[i]['output']}) for i in evol_instruct_70k_indices]
+
     wiki_qa_indices = random.sample(range(sample_ratios['wiki_qa']['size']), int(sample_ratios['wiki_qa']['min_sample_size']))
     sample_ratios['wiki_qa']['indices']=dolly15k_indices
     wiki_qa_records = [generate_prompt_example(**{'prompt': wiki_qa[i]['question'], 'response': wiki_qa[i]['answer']}) for i in wiki_qa_indices]
@@ -254,6 +264,10 @@ if sample:
     cosmos_qa_indices = random.sample(range(sample_ratios['cosmos_qa']['size']), int(sample_ratios['cosmos_qa']['min_sample_size']))
     sample_ratios['cosmos_qa']['indices']=dolly15k_indices
     cosmos_qa_records = [generate_prompt_example(**{'context': cosmos_qa[i]['context'], 'prompt': cosmos_qa[i]['question'], 'response': cosmos_qa[i][f'answer{cosmos_qa[i]["label"]}'] if cosmos_qa[i]['label'] != -1 else ''}) for i in cosmos_qa_indices]
+
+    piqa_indices = random.sample(range(sample_ratios['piqa']['size']), int(sample_ratios['piqa']['min_sample_size']))
+    sample_ratios['piqa']['indices']=piqa_indices
+    piqa_records = [generate_prompt_example(**{'prompt': piqa[i]['goal']+'\n'+piqa[i]['sol1']+'\n'+piqa[i]['sol2'], 'response': piqa[i][f'sol{piqa[i]["label"] + 1}']}) for i in range(len(piqa)) if piqa[i]['label']+1 in (1, 2)]
 
     supernatural_indices = random.sample(range(sample_ratios['supernatural']['size']), int(sample_ratios['supernatural']['min_sample_size']))
     sample_ratios['supernatural']['indices']=dolly15k_indices
@@ -296,6 +310,8 @@ datasets_dict = {
     'subjqa_qa': {'pretrain': None, 'finetune': subjqa_qa_records},
     'quotes': {'pretrain': quotes_context_records, 'finetune': None},
     'flan_cot_ecqa': {'pretrain': None, 'finetune': flan_cot_ecqa_qa_records},
+    'evol_instruct_70k_qa_records': {'pretrain': None, 'finetune': evol_instruct_70k_qa_records},
+    'piqa_records': {'pretrain': None, 'finetune': piqa_records},
 }
 
 #pretrain_records_sample = [record for record in [*dolly15k_context_records, *squad_v2_context_records, *sciq_context_records, *quotes_context_records] if record and not isinstance(record, float)]
