@@ -172,10 +172,14 @@ def generate_prompt_example(cot=False, **kwargs):
     # Check if response is a list and join elements if it is
     response_str = ', '.join(response) if isinstance(response, list) else response
 
-    if(cot):
-        string = f"Context: {remove_extra_line_breaks(context)}\n{remove_extra_line_breaks(prompt)}\nResponse: {remove_extra_line_breaks(response_str)}"
+    if(context==''):
+        context = ''
     else:
-        string = f"Context: {remove_extra_line_breaks(context)}\nPrompt: {remove_extra_line_breaks(prompt)}\nResponse: {remove_extra_line_breaks(response_str)}"
+        context = 'Context:\n' + remove_extra_line_breaks(context) + '\n'
+    if(cot):
+        string = context + f"Prompt:\n{remove_extra_line_breaks(prompt)}\nResponse:\n{remove_extra_line_breaks(response_str)}"
+    else:
+        string = context + f"Prompt:\n{remove_extra_line_breaks(prompt)}\nResponse:\n{remove_extra_line_breaks(response_str)}"
 
     return string
 

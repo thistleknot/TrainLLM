@@ -10,5 +10,6 @@
     "oa_conversation": {"ratio": 2},
     "dolly15k": {"ratio": 2},
     "sciq": {"ratio": 1},
-    "subjqa": {"ratio": 1}
+    "subjqa": {"ratio": 1},
+    "flan_cot_ecqa": {"ratio": 3}
 }

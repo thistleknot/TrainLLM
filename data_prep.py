@@ -61,8 +61,14 @@ selected_indices = []
 if os.path.exists("datasets.pkl"):
     with open("datasets.pkl", "rb") as f:
         #dolly15k, squad_v2, squad, sciq, alpaca, wiki_qa, cosmos_qa, supernatural, quotes, red_pajama_contexts, oa_dataset = pickle.load(f)
-        dolly15k, squad_v2, squad, sciq, alpaca, wiki_qa, cosmos_qa, supernatural, quotes, oa_conversation_list, subjqa, openai_summarize_tldr = pickle.load(f)
+        dolly15k, squad_v2, squad, sciq, alpaca, wiki_qa, cosmos_qa, supernatural, quotes, oa_conversation_list, subjqa, openai_summarize_tldr, flan_cot_ecqa = pickle.load(f)
 else:
+
+    flan_cot_ecqa = pd.read_csv('/mnt/distvol/FLAN/flan/v2/cot_data/ecqa_train.tsv',delimiter='\t',header=None)
+    flan_cot_ecqa.columns = ['Prompt','Response','Reasoning']
+    #flan_cot_ecqa_dict = df.to_dict(orient='list')
+    flan_cot_ecqa = Dataset.from_pandas(flan_cot_ecqa)
+
     dolly15k = concatenate_datasets([load_dataset("treadon/dolly-15k")[split] for split in ['train', 'validation']])
     squad_v2 = concatenate_datasets([load_dataset("squad_v2")[split] for split in ['train', 'validation']])
     squad = concatenate_datasets([load_dataset("squad")[split] for split in ['train', 'validation']])
@@ -168,7 +174,7 @@ else:
 
     with open("datasets.pkl", "wb") as f:
         #pickle.dump((dolly15k, squad_v2, squad, sciq, alpaca, wiki_qa, cosmos_qa, supernatural, quotes, red_pajama_contexts, oa_dataset), f)
-        pickle.dump((dolly15k, squad_v2, squad, sciq, alpaca, wiki_qa, cosmos_qa, supernatural, quotes, oa_conversation_list, subjqa, openai_summarize_tldr), f)
+        pickle.dump((dolly15k, squad_v2, squad, sciq, alpaca, wiki_qa, cosmos_qa, supernatural, quotes, oa_conversation_list, subjqa, openai_summarize_tldr, flan_cot_ecqa), f)
 
 if sample:
     #pretrain
@@ -188,6 +194,7 @@ if sample:
     sample_ratios['oa_conversation']['size'] = len(oa_conversation_list)
     sample_ratios['subjqa']['size'] = len(subjqa)
     sample_ratios['quotes']['size'] = len(quotes)
+    sample_ratios['flan_cot_ecqa']['size'] = len(flan_cot_ecqa)
 
     df_ratios = pd.DataFrame(sample_ratios).T
     df_ratios['ratios'] = np.round(df_ratios['ratio']/np.nanmean(df_ratios['ratio']),2)
@@ -220,6 +227,10 @@ if sample:
     sample_ratios['squad_v2']['indices']=dolly15k_indices
     squad_v2_context_records = [squad_v2[i]['context'] for i in squad_v2_indices]
     squad_v2_qa_records = [generate_prompt_example(**{'prompt': squad_v2[i]['question'], 'response': squad_v2[i]['answers']['text']}) for i in squad_v2_indices]
+
+    flan_cot_ecqa_indices = random.sample(range(sample_ratios['flan_cot_ecqa']['size']), int(sample_ratios['flan_cot_ecqa']['min_sample_size']))
+
+    flan_cot_ecqa_qa_records = [generate_prompt_example(**{'prompt': flan_cot_ecqa[i]['Prompt'], 'response': flan_cot_ecqa[i]['Response'] + '\n' + flan_cot_ecqa[i]['Reasoning']}) for i in flan_cot_ecqa_indices]
 
     """
     squad_indices = random.sample(range(sample_ratios['squad']['size']), int(sample_ratios['squad']['min_sample_size']))
@@ -271,18 +282,20 @@ if sample:
     sample_ratios['quotes']['indices']=dolly15k_indices
     quotes_context_records = [quotes[i] for i in quotes_indices]
 
+
 datasets_dict = {
     'dolly15k': {'pretrain': dolly15k_context_records, 'finetune': dolly15k_qa_records},
     'squad_v2': {'pretrain': squad_v2_context_records, 'finetune': squad_v2_qa_records},
     'sciq': {'pretrain': sciq_context_records, 'finetune': sciq_records},
-    'quotes': {'pretrain': quotes_context_records, 'finetune': None},
-    'wiki_qa': {'pretrain': None, 'finetune': wiki_qa_records},
     'alpaca': {'pretrain': None, 'finetune': alpaca_qa_records},
+    'wiki_qa': {'pretrain': None, 'finetune': wiki_qa_records},
     'cosmos_qa': {'pretrain': None, 'finetune': cosmos_qa_records},
     'supernatural': {'pretrain': None, 'finetune': supernatural_records},
+    'openai_summarize_tldr': {'pretrain': None, 'finetune': openai_summarize_tldr_records},
     'oa_conversation': {'pretrain': None, 'finetune': oa_qa_records},
     'subjqa_qa': {'pretrain': None, 'finetune': subjqa_qa_records},
-    'openai_summarize_tldr': {'pretrain': None, 'finetune': openai_summarize_tldr_records},
+    'quotes': {'pretrain': quotes_context_records, 'finetune': None},
+    'flan_cot_ecqa': {'pretrain': None, 'finetune': flan_cot_ecqa_qa_records},
 }
 
 #pretrain_records_sample = [record for record in [*dolly15k_context_records, *squad_v2_context_records, *sciq_context_records, *quotes_context_records] if record and not isinstance(record, float)]
