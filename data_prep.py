@@ -35,10 +35,9 @@ args = Namespace(**pretrain_config)
 # Reset random seed
 set_seed(args.seed)
 
-A=5e-5
-B=3e-5
-C=1e-5
-C<B<A
+A=2e-4
+B=2e-5
+A>B
 
 #set to true if new model
 if not os.path.exists("gpt-neo-125M/pytorch_model.bin"):
@@ -61,17 +60,17 @@ selected_indices = []
 if os.path.exists("datasets.pkl"):
     with open("datasets.pkl", "rb") as f:
         #dolly15k, squad_v2, squad, sciq, alpaca, wiki_qa, cosmos_qa, supernatural, quotes, red_pajama_contexts, oa_dataset = pickle.load(f)
-        dolly15k, squad_v2, squad, sciq, alpaca, wiki_qa, cosmos_qa, supernatural, quotes, oa_conversation_list, subjqa, openai_summarize_tldr, flan_cot_ecqa, piqa, evol_instruct_70k = pickle.load(f)
+        dolly15k, squad_v2, sciq, alpaca, wiki_qa, cosmos_qa, supernatural, quotes, oa_conversation_list, subjqa, openai_summarize_tldr, flan_cot_ecqa, piqa, evol_instruct_70k, math_qa, finance_alpaca_filtered = pickle.load(f)
 else:
 
     flan_cot_ecqa = pd.read_csv('/mnt/distvol/FLAN/flan/v2/cot_data/ecqa_train.tsv',delimiter='\t',header=None)
     flan_cot_ecqa.columns = ['Prompt','Response','Reasoning']
     #flan_cot_ecqa_dict = df.to_dict(orient='list')
     flan_cot_ecqa = Dataset.from_pandas(flan_cot_ecqa)
-
+    math_qa = concatenate_datasets([load_dataset("math_qa")[split] for split in ['train', 'test', 'validation']])
     dolly15k = concatenate_datasets([load_dataset("treadon/dolly-15k")[split] for split in ['train', 'validation']])
     squad_v2 = concatenate_datasets([load_dataset("squad_v2")[split] for split in ['train', 'validation']])
-    squad = concatenate_datasets([load_dataset("squad")[split] for split in ['train', 'validation']])
+    #squad = concatenate_datasets([load_dataset("squad")[split] for split in ['train', 'validation']])
     sciq = concatenate_datasets([load_dataset("sciq")[split] for split in ['train', 'validation','test']])
     alpaca = load_dataset("tatsu-lab/alpaca")['train']
     wiki_qa = concatenate_datasets([load_dataset("wiki_qa")[split] for split in ['train', 'validation','test']])
@@ -79,6 +78,8 @@ else:
     openai_summarize_tldr = concatenate_datasets([load_dataset("CarperAI/openai_summarize_tldr")[split] for split in ['train', 'valid', 'test']])
     piqa = concatenate_datasets([load_dataset("piqa")[split] for split in ['train', 'validation', 'test']])
     evol_instruct_70k = concatenate_datasets([load_dataset("WizardLM/evol_instruct_70k")['train']])
+    finance_alpaca = load_dataset("gbharti/finance-alpaca")
+    finance_alpaca_filtered = finance_alpaca['train'].filter(lambda x: x['input'] == '')
 
     """
     oa = load_dataset("h2oai/h2ogpt-oig-oasst1-instruct-cleaned-v2")
@@ -177,29 +178,52 @@ else:
 
     with open("datasets.pkl", "wb") as f:
         #pickle.dump((dolly15k, squad_v2, squad, sciq, alpaca, wiki_qa, cosmos_qa, supernatural, quotes, red_pajama_contexts, oa_dataset), f)
-        pickle.dump((dolly15k, squad_v2, squad, sciq, alpaca, wiki_qa, cosmos_qa, supernatural, quotes, oa_conversation_list, subjqa, openai_summarize_tldr, flan_cot_ecqa, piqa, evol_instruct_70k), f)
+        pickle.dump((dolly15k, squad_v2, sciq, alpaca, wiki_qa, cosmos_qa, supernatural, quotes, oa_conversation_list, subjqa, openai_summarize_tldr, flan_cot_ecqa, piqa, evol_instruct_70k, math_qa, finance_alpaca_filtered), f)
 
 if sample:
     #pretrain
     #finetune
 
     # Sample indices for common datasets (e.g., Dolly, SQuAD v2, SCI-Q)
+
+    {
+    "math_qa": {"ratio": 1.4},
+    "finance_alpaca": {"ratio": 1.4},
+    "evol_instruct_70k": {"ratio": 1.3},
+    "flan_cot_ecqa": {"ratio": 1.3},
+    "wiki_qa": {"ratio": 1.1},
+    "piqa": {"ratio": 1.1},
+    "alpaca": {"ratio": 1.1},
+    "dolly15k": {"ratio": 1.1},
+    "subjqa": {"ratio": 0.9},
+    "squad_v2": {"ratio": 0.9},
+    "openai_summarize_tldr": {"ratio": 0.9},
+    "oa_conversation": {"ratio": 0.8},
+    "quotes": {"ratio": 0.7},
+    "cosmos_qa": {"ratio": 0.7},
+    "sciq": {"ratio": 0.7},
+    "supernatural": {"ratio": 0.7}
+    }
+
+
     
-    sample_ratios['dolly15k']['size'] = len(dolly15k)
-    sample_ratios['squad_v2']['size'] = len(squad_v2)
-    sample_ratios['squad']['size'] = len(squad)
-    sample_ratios['sciq']['size'] = len(sciq)
-    sample_ratios['alpaca']['size'] = len(alpaca['text'])
+    sample_ratios['math_qa']['size'] = len(math_qa)
+    sample_ratios['finance_alpaca']['size'] = len(finance_alpaca_filtered)
+    sample_ratios['evol_instruct_70k']['size'] = len(evol_instruct_70k)
+    sample_ratios['flan_cot_ecqa']['size'] = len(flan_cot_ecqa)
     sample_ratios['wiki_qa']['size'] = len(wiki_qa)
-    sample_ratios['cosmos_qa']['size'] = len(cosmos_qa)
-    sample_ratios['supernatural']['size'] = len(supernatural)
+    sample_ratios['piqa']['size'] = len(piqa)
+    sample_ratios['alpaca']['size'] = len(alpaca['text'])
+    sample_ratios['dolly15k']['size'] = len(dolly15k)
+    sample_ratios['subjqa']['size'] = len(subjqa)
+    sample_ratios['squad_v2']['size'] = len(squad_v2)
     sample_ratios['openai_summarize_tldr']['size'] = len(openai_summarize_tldr)
     sample_ratios['oa_conversation']['size'] = len(oa_conversation_list)
-    sample_ratios['subjqa']['size'] = len(subjqa)
     sample_ratios['quotes']['size'] = len(quotes)
-    sample_ratios['flan_cot_ecqa']['size'] = len(flan_cot_ecqa)
-    sample_ratios['piqa']['size'] = len(piqa)
-    sample_ratios['evol_instruct_70k']['size'] = len(evol_instruct_70k)
+    sample_ratios['cosmos_qa']['size'] = len(cosmos_qa)
+    sample_ratios['sciq']['size'] = len(sciq)
+    sample_ratios['supernatural']['size'] = len(supernatural)
+    #sample_ratios['squad']['size'] = len(squad)
 
     print(sample_ratios)
     df_ratios = pd.DataFrame(sample_ratios).T
@@ -207,7 +231,7 @@ if sample:
     
     df_ratios['sample_size'] = np.round((df_ratios['ratios'] * sample_size),0)
     df_ratios['min_sample_size'] = np.minimum(df_ratios['size'], df_ratios['sample_size']).where(df_ratios['sample_size'].notna(), np.nan)
-    
+
     for v in sample_ratios.values():
         ratio = v['ratio']
         if ratio is None:
@@ -235,8 +259,11 @@ if sample:
     squad_v2_qa_records = [generate_prompt_example(**{'prompt': squad_v2[i]['question'], 'response': squad_v2[i]['answers']['text']}) for i in squad_v2_indices]
 
     flan_cot_ecqa_indices = random.sample(range(sample_ratios['flan_cot_ecqa']['size']), int(sample_ratios['flan_cot_ecqa']['min_sample_size']))
-
     flan_cot_ecqa_qa_records = [generate_prompt_example(**{'prompt': flan_cot_ecqa[i]['Prompt'], 'response': flan_cot_ecqa[i]['Response'] + '\n' + flan_cot_ecqa[i]['Reasoning']}) for i in flan_cot_ecqa_indices]
+
+    math_qa_indices = random.sample(range(sample_ratios['math_qa']['size']), int(sample_ratios['math_qa']['min_sample_size']))
+    sample_ratios['math_qa']['indices']=math_qa_indices
+    math_qa_records = [generate_prompt_example(**{'prompt': math_qa[i]['Problem'] + '\n' + '\n'.join([a for a in math_qa[i]['options'].split(', ')]), 'response': math_qa[i]['Rationale'] + '\nPseudocode:\n' + math_qa[i]['annotated_formula']}) for i in math_qa_indices]
 
     """
     squad_indices = random.sample(range(sample_ratios['squad']['size']), int(sample_ratios['squad']['min_sample_size']))
@@ -267,7 +294,11 @@ if sample:
 
     piqa_indices = random.sample(range(sample_ratios['piqa']['size']), int(sample_ratios['piqa']['min_sample_size']))
     sample_ratios['piqa']['indices']=piqa_indices
-    piqa_records = [generate_prompt_example(**{'prompt': piqa[i]['goal']+'\n'+piqa[i]['sol1']+'\n'+piqa[i]['sol2'], 'response': piqa[i][f'sol{piqa[i]["label"] + 1}']}) for i in range(len(piqa)) if piqa[i]['label']+1 in (1, 2)]
+    piqa_records = [generate_prompt_example(**{'prompt': piqa[i]['goal']+'\n'+piqa[i]['sol1']+'\n'+piqa[i]['sol2'], 'response': piqa[i][f'sol{piqa[i]["label"] + 1}']}) for i in piqa_indices if piqa[i]['label']+1 in (1, 2)]    
+
+    finance_alpaca_indices = random.sample(range(sample_ratios['finance_alpaca']['size']), int(sample_ratios['finance_alpaca']['min_sample_size']))
+    sample_ratios['finance_alpaca']['indices']=finance_alpaca_indices
+    finance_alpaca_records = [generate_prompt_example(**{'prompt': finance_alpaca_filtered[i]['instruction'], 'response': finance_alpaca_filtered[i]['output']}) for i in finance_alpaca_indices]
 
     supernatural_indices = random.sample(range(sample_ratios['supernatural']['size']), int(sample_ratios['supernatural']['min_sample_size']))
     sample_ratios['supernatural']['indices']=dolly15k_indices
@@ -298,20 +329,22 @@ if sample:
 
 
 datasets_dict = {
-    'dolly15k': {'pretrain': dolly15k_context_records, 'finetune': dolly15k_qa_records},
-    'squad_v2': {'pretrain': squad_v2_context_records, 'finetune': squad_v2_qa_records},
-    'sciq': {'pretrain': sciq_context_records, 'finetune': sciq_records},
-    'alpaca': {'pretrain': None, 'finetune': alpaca_qa_records},
+    'math_qa': {'pretrain': None, 'finetune': math_qa_records},
+    'finance_alpaca': {'pretrain': None, 'finetune': finance_alpaca_records},
+    'evol_instruct_70k_qa_records': {'pretrain': None, 'finetune': evol_instruct_70k_qa_records},
+    'flan_cot_ecqa': {'pretrain': None, 'finetune': flan_cot_ecqa_qa_records},
     'wiki_qa': {'pretrain': None, 'finetune': wiki_qa_records},
-    'cosmos_qa': {'pretrain': None, 'finetune': cosmos_qa_records},
-    'supernatural': {'pretrain': None, 'finetune': supernatural_records},
+    'piqa': {'pretrain': None, 'finetune': piqa_records},
+    'alpaca': {'pretrain': None, 'finetune': alpaca_qa_records},
+    'dolly15k': {'pretrain': dolly15k_context_records, 'finetune': dolly15k_qa_records},
+    'subjqa': {'pretrain': None, 'finetune': subjqa_qa_records},
+    'squad_v2': {'pretrain': squad_v2_context_records, 'finetune': squad_v2_qa_records},
     'openai_summarize_tldr': {'pretrain': None, 'finetune': openai_summarize_tldr_records},
     'oa_conversation': {'pretrain': None, 'finetune': oa_qa_records},
-    'subjqa_qa': {'pretrain': None, 'finetune': subjqa_qa_records},
     'quotes': {'pretrain': quotes_context_records, 'finetune': None},
-    'flan_cot_ecqa': {'pretrain': None, 'finetune': flan_cot_ecqa_qa_records},
-    'evol_instruct_70k_qa_records': {'pretrain': None, 'finetune': evol_instruct_70k_qa_records},
-    'piqa_records': {'pretrain': None, 'finetune': piqa_records},
+    'cosmos_qa': {'pretrain': None, 'finetune': cosmos_qa_records},
+    'sciq': {'pretrain': sciq_context_records, 'finetune': sciq_records},
+    'supernatural': {'pretrain': None, 'finetune': supernatural_records}
 }
 
 #pretrain_records_sample = [record for record in [*dolly15k_context_records, *squad_v2_context_records, *sciq_context_records, *quotes_context_records] if record and not isinstance(record, float)]
