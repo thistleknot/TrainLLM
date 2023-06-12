@@ -1,3 +1,4 @@
+#uvicorn app:app --host 0.0.0.0 --port 8000
 import torch
 from transformers import AutoTokenizer, AutoModelForCausalLM
 from fastapi import FastAPI

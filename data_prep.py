@@ -254,7 +254,7 @@ if sample:
     dolly15k_qa_records = [generate_prompt_example(**{'prompt': dolly15k[i]['instruction'], 'response': dolly15k[i]['response']}) for i in dolly15k_indices]
 
     squad_v2_indices = random.sample(range(sample_ratios['squad_v2']['size']), int(sample_ratios['squad_v2']['min_sample_size']))
-    sample_ratios['squad_v2']['indices']=dolly15k_indices
+    sample_ratios['squad_v2']['indices']=squad_v2_indices
     squad_v2_context_records = [squad_v2[i]['context'] for i in squad_v2_indices]
     squad_v2_qa_records = [generate_prompt_example(**{'prompt': squad_v2[i]['question'], 'response': squad_v2[i]['answers']['text']}) for i in squad_v2_indices]
 
@@ -272,12 +272,12 @@ if sample:
     squad_qa_records = [generate_prompt_example(**{'prompt': squad[i]['question'], 'response': squad[i]['answers']['text']}) for i in squad_indices]
     """
     sciq_indices = random.sample(range(sample_ratios['sciq']['size']), int(sample_ratios['sciq']['min_sample_size']))
-    sample_ratios['sciq']['indices']=dolly15k_indices
+    sample_ratios['sciq']['indices']=sciq_indices
     sciq_context_records = [sciq[i]['support'] for i in sciq_indices]
     sciq_records = [generate_prompt_example(**{'prompt': sciq[i]['question'], 'response': sciq[i]['correct_answer']}) for i in sciq_indices]
 
     alpaca_indices = random.sample(range(sample_ratios['alpaca']['size']), int(sample_ratios['alpaca']['min_sample_size']))
-    sample_ratios['alpaca']['indices']=dolly15k_indices
+    sample_ratios['alpaca']['indices']=alpaca_indices
     alpaca_qa_records = [generate_prompt_example(**{'prompt': alpaca[i]['instruction'], 'response': alpaca[i]['output']}) for i in alpaca_indices]
 
     evol_instruct_70k_indices = random.sample(range(sample_ratios['evol_instruct_70k']['size']), int(sample_ratios['evol_instruct_70k']['min_sample_size']))
@@ -285,11 +285,11 @@ if sample:
     evol_instruct_70k_qa_records = [generate_prompt_example(**{'prompt': evol_instruct_70k[i]['instruction'], 'response': evol_instruct_70k[i]['output']}) for i in evol_instruct_70k_indices]
 
     wiki_qa_indices = random.sample(range(sample_ratios['wiki_qa']['size']), int(sample_ratios['wiki_qa']['min_sample_size']))
-    sample_ratios['wiki_qa']['indices']=dolly15k_indices
+    sample_ratios['wiki_qa']['indices']=wiki_qa_indices
     wiki_qa_records = [generate_prompt_example(**{'prompt': wiki_qa[i]['question'], 'response': wiki_qa[i]['answer']}) for i in wiki_qa_indices]
 
     cosmos_qa_indices = random.sample(range(sample_ratios['cosmos_qa']['size']), int(sample_ratios['cosmos_qa']['min_sample_size']))
-    sample_ratios['cosmos_qa']['indices']=dolly15k_indices
+    sample_ratios['cosmos_qa']['indices']=cosmos_qa_indices
     cosmos_qa_records = [generate_prompt_example(**{'context': cosmos_qa[i]['context'], 'prompt': cosmos_qa[i]['question'], 'response': cosmos_qa[i][f'answer{cosmos_qa[i]["label"]}'] if cosmos_qa[i]['label'] != -1 else ''}) for i in cosmos_qa_indices]
 
     piqa_indices = random.sample(range(sample_ratios['piqa']['size']), int(sample_ratios['piqa']['min_sample_size']))
@@ -301,22 +301,22 @@ if sample:
     finance_alpaca_records = [generate_prompt_example(**{'prompt': finance_alpaca_filtered[i]['instruction'], 'response': finance_alpaca_filtered[i]['output']}) for i in finance_alpaca_indices]
 
     supernatural_indices = random.sample(range(sample_ratios['supernatural']['size']), int(sample_ratios['supernatural']['min_sample_size']))
-    sample_ratios['supernatural']['indices']=dolly15k_indices
+    sample_ratios['supernatural']['indices']=supernatural_indices
     supernatural_records = [generate_prompt_example(**{'prompt': supernatural[i]['prompt'], 'response': supernatural[i]['response']}) for i in supernatural_indices]
     
     openai_summarize_tldr_indices = random.sample(range(sample_ratios['openai_summarize_tldr']['size']), int(sample_ratios['openai_summarize_tldr']['min_sample_size']))
-    sample_ratios['openai_summarize_tldr']['indices']=dolly15k_indices
+    sample_ratios['openai_summarize_tldr']['indices']=openai_summarize_tldr_indices
     openai_summarize_tldr_records = [generate_prompt_example(**{'context': openai_summarize_tldr[i]['prompt'], 'prompt': 'TL;DR', 'response': openai_summarize_tldr[i]['label']}) for i in openai_summarize_tldr_indices]
 
     oa_indices = random.sample(range(sample_ratios['oa_conversation']['size']), int(sample_ratios['oa_conversation']['min_sample_size']))
-    sample_ratios['oa_conversation']['indices']=dolly15k_indices
+    sample_ratios['oa_conversation']['indices']=oa_indices
     oa_qa_records = [generate_prompt_example(**{'prompt': oa_conversation_list[i][0], 'response': oa_conversation_list[i][1]}, cot=True) for i in oa_indices]
 
     #oa_finetune_records = [generate_prompt_example(**{'prompt': oa_dataset[i]['human'], 'response': oa_dataset[i]['bot']}) for i in oa_indices]
     #oa_finetune_records = [generate_prompt_example(**{'prompt': c[0], 'response': c[1]}, cot=True) for c in oa_conversation_list]
 
     subjqa_indices = random.sample(range(sample_ratios['subjqa']['size']), int(sample_ratios['subjqa']['min_sample_size']))
-    sample_ratios['subjqa']['indices']=dolly15k_indices
+    sample_ratios['subjqa']['indices']=subjqa_indices
     subjqa_qa_records = [generate_prompt_example(**{'context': subjqa[i]['context'], 'prompt': subjqa[i]['question'], 'response': subjqa[i]['answers']['text']}) for i in subjqa_indices]
 
     if(False):
@@ -324,7 +324,7 @@ if sample:
         #red_pajamas_records = [red_pajama_contexts[i] for i in red_pajamas_indices]
 
     quotes_indices = random.sample(range(sample_ratios['quotes']['size']), int(sample_ratios['quotes']['min_sample_size']))
-    sample_ratios['quotes']['indices']=dolly15k_indices
+    sample_ratios['quotes']['indices']=quotes_indices
     quotes_context_records = [quotes[i] for i in quotes_indices]
 
 
